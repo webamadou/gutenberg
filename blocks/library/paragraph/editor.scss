@@ -1,4 +1,4 @@
-.editor-block-list__block:not( .is-multi-selected ) .wp-block-paragraph {
+.editor-block-list__block:not( .is-multi-selected ) .wp-block-paragraph:not( .has-background ) {
 	background: white;
 }
 
