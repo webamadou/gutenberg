@@ -7,12 +7,14 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
+import { getBlockType } from '@wordpress/blocks';
 
 const TableOfContentsItem = ( {
 	children,
 	isValid,
 	level,
 	onClick,
+	path = [],
 } ) => (
 	<li
 		className={ classnames(
@@ -28,6 +30,15 @@ const TableOfContentsItem = ( {
 			onClick={ onClick }
 		>
 			<span className="document-outline__emdash" aria-hidden="true"></span>
+			{
+				// path is an array of nodes that are ancestors of the heading starting in the top level node.
+				// This mapping renders each ancestor to make it easier for the user to know where the headings are nested.
+				path.map( ( { name }, index ) => (
+					<strong key={ index } className="document-outline__level">
+						{ getBlockType( name ).title }
+					</strong>
+				) )
+			}
 			<strong className="document-outline__level">
 				{ level }
 			</strong>
