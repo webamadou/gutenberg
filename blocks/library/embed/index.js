@@ -4,6 +4,7 @@
 import { parse } from 'url';
 import { includes, kebabCase, toLower } from 'lodash';
 import { stringify } from 'querystring';
+import memoize from 'memize';
 
 /**
  * WordPress dependencies
@@ -26,7 +27,32 @@ import BlockAlignmentToolbar from '../../block-alignment-toolbar';
 // These embeds do not work in sandboxes
 const HOSTS_NO_PREVIEWS = [ 'facebook.com' ];
 
-function getEmbedBlockSettings( { title, icon, category = 'embed', transforms, keywords = [] } ) {
+const wpEmbedAPI = memoize( ( url ) => wp.apiRequest( { path: `/oembed/1.0/proxy?${ stringify( { url } ) }` } ) );
+
+const matchesPatterns = ( url, patterns ) => {
+	for ( const patternIndex in patterns ) {
+		const pattern = new RegExp( '^https?:\/\/' + patterns[ patternIndex ] + '$', 'i' );
+		if ( url.match( pattern ) ) {
+			return true;
+		}
+	}
+	return false;
+};
+
+const findBlock = ( url ) => {
+	const findMatch = ( blocks ) => {
+		for ( const blockIndex in blocks ) {
+			const blockSettings = blocks[ blockIndex ];
+			if ( matchesPatterns( url, blockSettings.settings.patterns ) ) {
+				return blockSettings.name;
+			}
+		}
+		return 'core/embed';
+	};
+	return findMatch( [ ...common, ...others ] );
+};
+
+function getEmbedBlockSettings( { title, icon, category = 'embed', transforms, keywords = [], providerName = '', patterns = [] } ) {
 	return {
 		title,
 
@@ -37,6 +63,10 @@ function getEmbedBlockSettings( { title, icon, category = 'embed', transforms, k
 		category,
 
 		keywords,
+
+		providerName,
+
+		patterns,
 
 		attributes: {
 			url: {
@@ -110,20 +140,41 @@ function getEmbedBlockSettings( { title, icon, category = 'embed', transforms, k
 				const { url } = this.props.attributes;
 				const { setAttributes } = this.props;
 
+				// If we don't have any URL patterns, or we do and the URL doesn't match,
+				// then we should look for a block that has a matching URL pattern.
+				if ( ! patterns || ( patterns && ! matchesPatterns( url, patterns ) ) ) {
+					const matchingBlock = findBlock( url );
+					// WordPress blocks can work on multiple sites, and so don't have patterns.
+					if ( 'core-embed/wordpress' !== this.props.name && 'core/embed' !== matchingBlock ) {
+						// At this point, we have discovered a more suitable block for this url, so transform it.
+						if ( this.props.name !== matchingBlock ) {
+							this.props.onReplace( createBlock( matchingBlock, { url } ) );
+							return;
+						}
+					}
+				}
+
 				this.setState( { error: false, fetching: true } );
-				wp.apiRequest( { path: `/oembed/1.0/proxy?${ stringify( { url } ) }` } )
+				wpEmbedAPI( url )
 					.then(
 						( obj ) => {
 							if ( this.unmounting ) {
 								return;
 							}
-
-							const { html, provider_name: providerName } = obj;
-							const providerNameSlug = kebabCase( toLower( providerName ) );
-							let { type } = obj;
+							// Some plugins put the embed html in `result`, so get the right one here.
+							const html = obj.html ? obj.html : obj.result;
+							// Block titles are the provider names, but we can override with `providerName` too.
+							const providerNameSlug = kebabCase( toLower( '' !== providerName ? providerName : title ) );
+							let { type = 'rich' } = obj;
 
 							if ( includes( html, 'class="wp-embedded-content" data-secret' ) ) {
 								type = 'wp-embed';
+								// If this is not the WordPress embed block, transform it into one, there's
+								// no URL pattern that can detect WordPress embeds.
+								if ( this.props.name !== 'core-embed/wordpress' ) {
+									this.props.onReplace( createBlock( 'core-embed/wordpress', { url } ) );
+									return;
+								}
 							}
 							if ( html ) {
 								this.setState( { html, type, providerNameSlug } );
@@ -282,6 +333,7 @@ export const common = [
 			title: 'Twitter',
 			icon: 'embed-post',
 			keywords: [ __( 'tweet' ) ],
+			patterns: [ '(www\.)?twitter\.com\/.+' ],
 		} ),
 	},
 	{
@@ -290,6 +342,7 @@ export const common = [
 			title: 'YouTube',
 			icon: 'embed-video',
 			keywords: [ __( 'music' ), __( 'video' ) ],
+			patterns: [ '((m|www)\.)?youtube\.com\/.+', 'youtu\.be\/.+' ],
 		} ),
 	},
 	{
@@ -297,6 +350,7 @@ export const common = [
 		settings: getEmbedBlockSettings( {
 			title: 'Facebook',
 			icon: 'embed-post',
+			patterns: [ 'www\.facebook.com\/.+' ],
 		} ),
 	},
 	{
@@ -305,6 +359,7 @@ export const common = [
 			title: 'Instagram',
 			icon: 'embed-photo',
 			keywords: [ __( 'image' ) ],
+			patterns: [ '(www\.)?instagr(\.am|am\.com)/.+' ],
 		} ),
 	},
 	{
@@ -321,6 +376,7 @@ export const common = [
 			title: 'SoundCloud',
 			icon: 'embed-audio',
 			keywords: [ __( 'music' ), __( 'audio' ) ],
+			patterns: [ '(www\.)?soundcloud\.com\/.+' ],
 		} ),
 	},
 	{
@@ -329,6 +385,7 @@ export const common = [
 			title: 'Spotify',
 			icon: 'embed-audio',
 			keywords: [ __( 'music' ), __( 'audio' ) ],
+			patterns: [ '(open|play)\.spotify\.com\/.+' ],
 		} ),
 	},
 	{
@@ -337,6 +394,7 @@ export const common = [
 			title: 'Flickr',
 			icon: 'embed-photo',
 			keywords: [ __( 'image' ) ],
+			patterns: [ '(www\.)?flickr\.com\/.+', 'flic\.fr/.+' ],
 		} ),
 	},
 	{
@@ -345,6 +403,7 @@ export const common = [
 			title: 'Vimeo',
 			icon: 'embed-video',
 			keywords: [ __( 'video' ) ],
+			patterns: [ '(www\.)?vimeo\.com\/.+' ],
 		} ),
 	},
 ];
@@ -355,6 +414,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Animoto',
 			icon: 'embed-video',
+			patterns: [ '(www\.)?(animoto|video214)\.com\/.+' ],
 		} ),
 	},
 	{
@@ -362,6 +422,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Cloudup',
 			icon: 'embed-post',
+			patterns: [ 'cloudup\.com\/.+' ],
 		} ),
 	},
 	{
@@ -369,6 +430,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'CollegeHumor',
 			icon: 'embed-video',
+			patterns: [ '(www\.)?collegehumor\.com\/.+' ],
 		} ),
 	},
 	{
@@ -376,6 +438,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Dailymotion',
 			icon: 'embed-video',
+			patterns: [ '(www\.)?dailymotion\.com\/.+' ],
 		} ),
 	},
 	{
@@ -383,6 +446,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Funny or Die',
 			icon: 'embed-video',
+			patterns: [ '(www\.)?funnyordie\.com\/.+' ],
 		} ),
 	},
 	{
@@ -390,6 +454,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Hulu',
 			icon: 'embed-video',
+			patterns: [ '(www\.)?hulu\.com\/.+' ],
 		} ),
 	},
 	{
@@ -397,6 +462,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Imgur',
 			icon: 'embed-photo',
+			patterns: [ '(.+\.)?imgur\.com\/.+' ],
 		} ),
 	},
 	{
@@ -404,6 +470,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Issuu',
 			icon: 'embed-post',
+			patterns: [ '(www\.)?issuu\.com\/.+' ],
 		} ),
 	},
 	{
@@ -411,6 +478,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Kickstarter',
 			icon: 'embed-post',
+			patterns: [ '(www\.)?kickstarter\.com\/.+', 'kck\.st/.+' ],
 		} ),
 	},
 	{
@@ -418,6 +486,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Meetup.com',
 			icon: 'embed-post',
+			patterns: [ '(www\.)?meetu(\.ps|p\.com)\/.+' ],
 		} ),
 	},
 	{
@@ -426,6 +495,7 @@ export const others = [
 			title: 'Mixcloud',
 			icon: 'embed-audio',
 			keywords: [ __( 'music' ), __( 'audio' ) ],
+			patterns: [ '(www\.)?\/.+' ],
 		} ),
 	},
 	{
@@ -433,6 +503,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Photobucket',
 			icon: 'embed-photo',
+			patterns: [ '(www\.)?\/.+' ],
 		} ),
 	},
 	{
@@ -440,6 +511,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Polldaddy',
 			icon: 'embed-post',
+			patterns: [ '(www\.)?mixcloud\.com\/.+' ],
 		} ),
 	},
 	{
@@ -447,6 +519,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Reddit',
 			icon: 'embed-post',
+			patterns: [ '(www\.)?reddit\.com\/.+' ],
 		} ),
 	},
 	{
@@ -454,6 +527,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'ReverbNation',
 			icon: 'embed-audio',
+			patterns: [ '(www\.)?reverbnation\.com\/.+' ],
 		} ),
 	},
 	{
@@ -461,6 +535,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Screencast',
 			icon: 'embed-video',
+			patterns: [ '(www\.)?screencast\.com\/.+' ],
 		} ),
 	},
 	{
@@ -468,6 +543,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Scribd',
 			icon: 'embed-post',
+			patterns: [ '(www\.)?scribd\.com\/.+' ],
 		} ),
 	},
 	{
@@ -475,6 +551,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Slideshare',
 			icon: 'embed-post',
+			patterns: [ '(.+?\.)?slideshare\.net\/.+' ],
 		} ),
 	},
 	{
@@ -482,6 +559,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'SmugMug',
 			icon: 'embed-photo',
+			patterns: [ '(www\.)?smugmug\.com\/.+' ],
 		} ),
 	},
 	{
@@ -489,6 +567,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Speaker',
 			icon: 'embed-audio',
+			patterns: [ '(www\.)?speakerdeck\.com\/.+' ],
 		} ),
 	},
 	{
@@ -496,6 +575,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'TED',
 			icon: 'embed-video',
+			patterns: [ '(www\.|embed\.)?ted\.com\/.+' ],
 		} ),
 	},
 	{
@@ -503,6 +583,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Tumblr',
 			icon: 'embed-post',
+			patterns: [ '(www\.)?tumblr\.com\/.+' ],
 		} ),
 	},
 	{
@@ -511,6 +592,7 @@ export const others = [
 			title: 'VideoPress',
 			icon: 'embed-video',
 			keywords: [ __( 'video' ) ],
+			patterns: [ 'videopress\.com\/.+' ],
 		} ),
 	},
 	{
@@ -518,6 +600,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'WordPress.tv',
 			icon: 'embed-video',
+			patterns: [ 'wordpress\.tv\/.+' ],
 		} ),
 	},
 ];
