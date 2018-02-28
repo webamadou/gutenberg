@@ -495,7 +495,7 @@ export const others = [
 			title: 'Mixcloud',
 			icon: 'embed-audio',
 			keywords: [ __( 'music' ), __( 'audio' ) ],
-			patterns: [ '(www\.)?\/.+' ],
+			patterns: [ '(www\.)?mixcloud\.com\/.+' ],
 		} ),
 	},
 	{
@@ -503,7 +503,7 @@ export const others = [
 		settings: getEmbedBlockSettings( {
 			title: 'Photobucket',
 			icon: 'embed-photo',
-			patterns: [ '(www\.)?\/.+' ],
+			patterns: [ 'g?i*\.photobucket\.com\/.+' ],
 		} ),
 	},
 	{
