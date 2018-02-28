@@ -394,7 +394,7 @@ export const common = [
 			title: 'Flickr',
 			icon: 'embed-photo',
 			keywords: [ __( 'image' ) ],
-			patterns: [ '(www\.)?flickr\.com\/.+', 'flic\.fr/.+' ],
+			patterns: [ '(www\.)?flickr\.com\/.+', 'flic\.kr/.+' ],
 		} ),
 	},
 	{
