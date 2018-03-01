@@ -27,6 +27,7 @@ import BlockAlignmentToolbar from '../../block-alignment-toolbar';
 // These embeds do not work in sandboxes
 const HOSTS_NO_PREVIEWS = [ 'facebook.com' ];
 
+// Caches the embed API calls, so if blocks get transformed, or deleted and added again, we don't spam the API.
 const wpEmbedAPI = memoize( ( url ) => wp.apiRequest( { path: `/oembed/1.0/proxy?${ stringify( { url } ) }` } ) );
 
 const matchesPatterns = ( url, patterns ) => {
