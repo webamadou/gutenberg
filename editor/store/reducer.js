@@ -976,6 +976,42 @@ export const reusableBlocks = combineReducers( {
 	},
 } );
 
+/**
+ * Reducer that for each block uid stores an object that represents its nested nestings.
+ * E.g: what blocks can be nested inside a block.
+ *
+ * @param {Object} state  Current state.
+ * @param {Object} action Dispatched action.
+ *
+ * @return {Object} Updated state.
+ */
+export const blockListSettings = ( state = {}, action ) => {
+	switch ( action.type ) {
+		// even if the replaced blocks have the same uid our logic should correct the state.
+		case 'REPLACE_BLOCKS' :
+		case 'REMOVE_BLOCKS': {
+			return omit( state, action.uids );
+		}
+		case 'UPDATED_BLOCK_LIST_SETTINGS': {
+			const { id, settings } = action;
+			if ( id && ! settings ) {
+				return omit( state, id );
+			}
+			const blockSettings = state[ id ];
+			const updateIsRequired = ! isEqual( blockSettings, settings );
+			if ( updateIsRequired ) {
+				return {
+					...state,
+					[ id ]: {
+						...settings,
+					},
+				};
+			}
+		}
+	}
+	return state;
+};
+
 export default optimist( combineReducers( {
 	editor,
 	currentPost,
@@ -983,6 +1019,7 @@ export default optimist( combineReducers( {
 	blockSelection,
 	provisionalBlockUID,
 	blocksMode,
+	blockListSettings,
 	isInsertionPointVisible,
 	preferences,
 	saving,
