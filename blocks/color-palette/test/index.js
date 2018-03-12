@@ -6,7 +6,7 @@ import { shallow } from 'enzyme';
 /**
  * Internal dependencies
  */
-import { ColorPalette } from '../';
+import ColorPalette from '../';
 
 describe( 'ColorPalette', () => {
 	const colors = [ 'red', 'white', 'blue' ];

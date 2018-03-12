@@ -8,7 +8,7 @@ import { map } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { Dropdown, withContext } from '@wordpress/components';
+import { Dropdown } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 
 /**
@@ -16,7 +16,7 @@ import { __, sprintf } from '@wordpress/i18n';
  */
 import './style.scss';
 
-export function ColorPalette( { colors, disableCustomColors = false, value, onChange } ) {
+export default function ColorPalette( { colors, disableCustomColors = false, value, onChange } ) {
 	function applyOrUnset( color ) {
 		return () => onChange( value === color ? undefined : color );
 	}
@@ -77,12 +77,3 @@ export function ColorPalette( { colors, disableCustomColors = false, value, onCh
 		</div>
 	);
 }
-
-export default withContext( 'editor' )(
-	( settings, props ) => ( {
-		colors: props.colors || settings.colors,
-		disableCustomColors: props.disableCustomColors !== undefined ?
-			props.disableCustomColors :
-			settings.disableCustomColors,
-	} )
-)( ColorPalette );

@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { Component } from '@wordpress/element';
+import { Component, Fragment } from '@wordpress/element';
 import { Dashicon, IconButton, PanelColor, ToggleControl, withFallbackStyles } from '@wordpress/components';
 
 /**
@@ -16,6 +16,7 @@ import BlockControls from '../../block-controls';
 import BlockAlignmentToolbar from '../../block-alignment-toolbar';
 import ColorPalette from '../../color-palette';
 import ContrastChecker from '../../contrast-checker';
+import ColorContext from '../../color-context';
 import InspectorControls from '../../inspector-controls';
 
 const { getComputedStyle } = window;
@@ -101,24 +102,36 @@ class ButtonBlock extends Component {
 							checked={ !! clear }
 							onChange={ this.toggleClear }
 						/>
-						<PanelColor title={ __( 'Background Color' ) } colorValue={ color } >
-							<ColorPalette
-								value={ color }
-								onChange={ ( colorValue ) => setAttributes( { color: colorValue } ) }
-							/>
-						</PanelColor>
-						<PanelColor title={ __( 'Text Color' ) } colorValue={ textColor } >
-							<ColorPalette
-								value={ textColor }
-								onChange={ ( colorValue ) => setAttributes( { textColor: colorValue } ) }
-							/>
-						</PanelColor>
-						{ this.nodeRef && <ContrastCheckerWithFallbackStyles
-							node={ this.nodeRef }
-							textColor={ textColor }
-							backgroundColor={ color }
-							isLargeText={ true }
-						/> }
+						<ColorContext>
+							{ ( { colors, disableCustomColors, hasColorsToChoose } ) => hasColorsToChoose &&
+								<Fragment>
+									<PanelColor title={ __( 'Background Color' ) } colorValue={ color }>
+										<ColorPalette
+											colors={ colors }
+											disableCustomColors={ disableCustomColors }
+											onChange={ ( colorValue ) => setAttributes( { color: colorValue } ) }
+											value={ color }
+										/>
+									</PanelColor>
+									<PanelColor title={ __( 'Text Color' ) } colorValue={ textColor }>
+										<ColorPalette
+											colors={ colors }
+											disableCustomColors={ disableCustomColors }
+											onChange={ ( colorValue ) => setAttributes( { textColor: colorValue } ) }
+											value={ textColor }
+										/>
+									</PanelColor>
+									{ this.nodeRef &&
+										<ContrastCheckerWithFallbackStyles
+											node={ this.nodeRef }
+											textColor={ textColor }
+											backgroundColor={ color }
+											isLargeText={ true }
+										/>
+									}
+								</Fragment>
+							}
+						</ColorContext>
 					</InspectorControls>
 				}
 			</span>,

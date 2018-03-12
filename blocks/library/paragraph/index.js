@@ -8,7 +8,7 @@ import { findKey, isFinite, map, omit } from 'lodash';
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { concatChildren, Component, RawHTML } from '@wordpress/element';
+import { concatChildren, Component, Fragment, RawHTML } from '@wordpress/element';
 import {
 	Autocomplete,
 	PanelBody,
@@ -34,6 +34,7 @@ import RichText from '../../rich-text';
 import InspectorControls from '../../inspector-controls';
 import ColorPalette from '../../color-palette';
 import ContrastChecker from '../../contrast-checker';
+import ColorContext from '../../color-context';
 
 const { getComputedStyle } = window;
 
@@ -198,24 +199,36 @@ class ParagraphBlock extends Component {
 							onChange={ this.toggleDropCap }
 						/>
 					</PanelBody>
-					<PanelColor title={ __( 'Background Color' ) } colorValue={ backgroundColor } initialOpen={ false }>
-						<ColorPalette
-							value={ backgroundColor }
-							onChange={ ( colorValue ) => setAttributes( { backgroundColor: colorValue } ) }
-						/>
-					</PanelColor>
-					<PanelColor title={ __( 'Text Color' ) } colorValue={ textColor } initialOpen={ false }>
-						<ColorPalette
-							value={ textColor }
-							onChange={ ( colorValue ) => setAttributes( { textColor: colorValue } ) }
-						/>
-					</PanelColor>
-					{ this.nodeRef && <ContrastCheckerWithFallbackStyles
-						node={ this.nodeRef }
-						textColor={ textColor }
-						backgroundColor={ backgroundColor }
-						isLargeText={ fontSize >= 18 }
-					/> }
+					<ColorContext>
+						{ ( { colors, disableCustomColors, hasColorsToChoose } ) => hasColorsToChoose &&
+							<Fragment>
+								<PanelColor title={ __( 'Background Color' ) } colorValue={ backgroundColor } initialOpen={ false }>
+									<ColorPalette
+										colors={ colors }
+										disableCustomColors={ disableCustomColors }
+										onChange={ ( colorValue ) => setAttributes( { backgroundColor: colorValue } ) }
+										value={ backgroundColor }
+									/>
+								</PanelColor>
+								<PanelColor title={ __( 'Text Color' ) } colorValue={ textColor } initialOpen={ false }>
+									<ColorPalette
+										colors={ colors }
+										disableCustomColors={ disableCustomColors }
+										onChange={ ( colorValue ) => setAttributes( { textColor: colorValue } ) }
+										value={ textColor }
+									/>
+								</PanelColor>
+								{ this.nodeRef &&
+									<ContrastCheckerWithFallbackStyles
+										node={ this.nodeRef }
+										textColor={ textColor }
+										backgroundColor={ backgroundColor }
+										isLargeText={ fontSize >= 18 }
+									/>
+								}
+							</Fragment>
+						}
+					</ColorContext>
 					<PanelBody title={ __( 'Block Alignment' ) }>
 						<BlockAlignmentToolbar
 							value={ width }

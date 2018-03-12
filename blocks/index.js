@@ -20,6 +20,7 @@ export { default as BlockControls } from './block-controls';
 export { default as BlockEdit } from './block-edit';
 export { default as BlockIcon } from './block-icon';
 export { default as ColorPalette } from './color-palette';
+export { default as ColorContext } from './color-context';
 export { default as Editable } from './rich-text/editable';
 export { default as ImagePlaceholder } from './image-placeholder';
 export { default as InnerBlocks } from './inner-blocks';
