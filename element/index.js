@@ -13,6 +13,11 @@ import {
 } from 'lodash';
 
 /**
+ * WordPress dependencies
+ */
+import { deprecated } from '@wordpress/utils';
+
+/**
  * Returns a new element of given type. Type can be either a string tag name or
  * another function which itself returns an element.
  *
@@ -158,6 +163,12 @@ export { flowRight as compose };
  * @return {string} Wrapped display name.
  */
 export function getWrapperDisplayName( BaseComponent, wrapperName ) {
+	deprecated( 'getWrapperDisplayName', {
+		version: '2.7',
+		alternative: 'wp.element.createHigherOrderComponent',
+		plugin: 'Gutenberg',
+	} );
+
 	const { displayName = BaseComponent.name || 'Component' } = BaseComponent;
 
 	return `${ upperFirst( camelCase( wrapperName ) ) }(${ displayName })`;
@@ -178,7 +189,7 @@ export function createHigherOrderComponent( mapComponentToEnhancedComponent, mod
 	return ( OriginalComponent ) => {
 		const EnhancedComponent = mapComponentToEnhancedComponent( OriginalComponent );
 		const { displayName = OriginalComponent.name || 'Component' } = OriginalComponent;
-		EnhancedComponent.displayName = `${ modifierName }(${ displayName })`;
+		EnhancedComponent.displayName = `${ upperFirst( camelCase( modifierName ) ) }(${ displayName })`;
 
 		return EnhancedComponent;
 	};

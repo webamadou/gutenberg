@@ -141,7 +141,7 @@ function gutenberg_register_scripts_and_styles() {
 	wp_register_script(
 		'wp-element',
 		gutenberg_url( 'element/build/index.js' ),
-		array( 'react', 'react-dom', 'react-dom-server' ),
+		array( 'react', 'react-dom', 'react-dom-server', 'wp-utils' ),
 		filemtime( gutenberg_dir_path() . 'element/build/index.js' )
 	);
 	wp_register_script(
