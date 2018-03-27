@@ -4,11 +4,12 @@
 import classnames from 'classnames';
 import ResizableBox from 're-resizable';
 import {
-	startCase,
+	find,
+	get,
 	isEmpty,
 	map,
-	get,
 	pick,
+	startCase,
 } from 'lodash';
 
 /**
@@ -18,6 +19,8 @@ import { __ } from '@wordpress/i18n';
 import { Component, compose } from '@wordpress/element';
 import { getBlobByURL, revokeBlobURL, viewPort } from '@wordpress/utils';
 import {
+	Button,
+	ButtonGroup,
 	IconButton,
 	SelectControl,
 	TextControl,
@@ -143,10 +146,6 @@ class ImageBlock extends Component {
 		const { attributes, setAttributes, isSelected, className, settings, toggleSelection } = this.props;
 		const { url, alt, caption, align, id, href, width, height } = attributes;
 
-		const availableSizes = this.getAvailableSizes();
-		const figureStyle = width ? { width } : {};
-		const isResizable = [ 'wide', 'full' ].indexOf( align ) === -1 && ( ! viewPort.isExtraSmall() );
-
 		const controls = (
 			isSelected && (
 				<BlockControls key="controls">
@@ -175,7 +174,10 @@ class ImageBlock extends Component {
 			)
 		);
 
-		if ( ! url ) {
+		const availableSizes = this.getAvailableSizes();
+		const selectedSize = find( availableSizes, ( size ) => size.source_url === url );
+
+		if ( ! url || ! selectedSize ) {
 			return [
 				controls,
 				<ImagePlaceholder
@@ -194,18 +196,25 @@ class ImageBlock extends Component {
 			'is-focused': isSelected,
 		} );
 
-		// Disable reason: Each block can be selected by clicking on it
+		const figureStyle = width ? { width } : {};
+		const isResizable = [ 'wide', 'full' ].indexOf( align ) === -1 && ( ! viewPort.isExtraSmall() );
 
+		// Disable reason: Each block can be selected by clicking on it
 		/* eslint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/onclick-has-role, jsx-a11y/click-events-have-key-events */
 		return [
 			controls,
 			isSelected && (
 				<InspectorControls key="inspector">
 					<h2>{ __( 'Image Settings' ) }</h2>
-					<TextControl label={ __( 'Textual Alternative' ) } value={ alt } onChange={ this.updateAlt } help={ __( 'Describe the purpose of the image. Leave empty if the image is not a key part of the content.' ) } />
+					<TextControl
+						label={ __( 'Textual Alternative' ) }
+						value={ alt }
+						onChange={ this.updateAlt }
+						help={ __( 'Describe the purpose of the image. Leave empty if the image is not a key part of the content.' ) }
+					/>
 					{ ! isEmpty( availableSizes ) && (
 						<SelectControl
-							label={ __( 'Size' ) }
+							label={ __( 'Source Type' ) }
 							value={ url }
 							options={ map( availableSizes, ( size, name ) => ( {
 								value: size.source_url,
@@ -214,6 +223,62 @@ class ImageBlock extends Component {
 							onChange={ this.updateImageURL }
 						/>
 					) }
+					<div className="blocks-image-dimensions">
+						<div className="blocks-image-dimensions__row">
+							<TextControl
+								type="number"
+								className="blocks-image-dimensions__width"
+								label={ __( 'Width' ) }
+								value={ width !== undefined ? width : '' }
+								placeholder={ selectedSize.width }
+								onChange={ ( value ) => {
+									setAttributes( { width: parseInt( value, 10 ) } );
+								} }
+							/>
+							<TextControl
+								type="number"
+								className="blocks-image-dimensions__height"
+								label={ __( 'Height' ) }
+								value={ height !== undefined ? height : '' }
+								placeholder={ selectedSize.height }
+								onChange={ ( value ) => {
+									setAttributes( { height: parseInt( value, 10 ) } );
+								} }
+							/>
+						</div>
+						<div className="blocks-image-dimensions__row">
+							<ButtonGroup aria-label={ __( 'Image Size' ) }>
+								{ [ 25, 50, 75, 100 ].map( ( scale ) => {
+									const scaledWidth = Math.round( selectedSize.width * ( scale / 100 ) );
+									const scaledHeight = Math.round( selectedSize.height * ( scale / 100 ) );
+
+									const isCurrent = width === scaledWidth && height === scaledHeight;
+
+									return (
+										<Button
+											key={ scale }
+											isSmall
+											isPrimary={ isCurrent }
+											aria-pressed={ isCurrent }
+											onClick={ () => {
+												setAttributes( { width: scaledWidth, height: scaledHeight } );
+											} }
+										>
+											{ scale }%
+										</Button>
+									);
+								} ) }
+							</ButtonGroup>
+							<Button
+								isSmall
+								onClick={ () => {
+									setAttributes( { width: undefined, height: undefined } );
+								} }
+							>
+								{ __( 'Reset' ) }
+							</Button>
+						</div>
+					</div>
 				</InspectorControls>
 			),
 			<figure key="image" className={ classes } style={ figureStyle }>
