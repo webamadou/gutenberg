@@ -135,7 +135,7 @@ class ImageBlock extends Component {
 	}
 
 	updateImageURL( url ) {
-		this.props.setAttributes( { url } );
+		this.props.setAttributes( { url, width: undefined, height: undefined } );
 	}
 
 	getAvailableSizes() {
