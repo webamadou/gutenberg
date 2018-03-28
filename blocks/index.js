@@ -1,4 +1,9 @@
 /**
+ * WordPress dependencies
+ */
+import { withFilters } from '@wordpress/components';
+
+/**
  * Internal dependencies
  */
 import './hooks';
@@ -25,8 +30,10 @@ export { default as ImagePlaceholder } from './image-placeholder';
 export { default as InnerBlocks } from './inner-blocks';
 export { default as InspectorControls } from './inspector-controls';
 export { default as PlainText } from './plain-text';
-export { default as MediaUpload } from './media-upload';
 export { default as RichText } from './rich-text';
 export { default as RichTextProvider } from './rich-text/provider';
 export { default as UrlInput } from './url-input';
 export { default as UrlInputButton } from './url-input/button';
+
+// Deprecated component
+export const MediaUpload = withFilters( 'blocks.MediaUpload' )( () => null );

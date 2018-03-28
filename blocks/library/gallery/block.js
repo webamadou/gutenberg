@@ -13,6 +13,7 @@ import {
 	IconButton,
 	DropZone,
 	FormFileUpload,
+	MediaUpload,
 	RangeControl,
 	SelectControl,
 	ToggleControl,
@@ -22,7 +23,6 @@ import {
 /**
  * Internal dependencies
  */
-import MediaUpload from '../../media-upload';
 import ImagePlaceholder from '../../image-placeholder';
 import InspectorControls from '../../inspector-controls';
 import BlockControls from '../../block-controls';

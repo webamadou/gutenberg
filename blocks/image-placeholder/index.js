@@ -6,14 +6,19 @@ import { map } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { DropZone, FormFileUpload, Placeholder, Button } from '@wordpress/components';
+import {
+	Button,
+	DropZone,
+	FormFileUpload,
+	MediaUpload,
+	Placeholder,
+} from '@wordpress/components';
 import { mediaUpload } from '@wordpress/utils';
 import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
-import MediaUpload from '../media-upload';
 import { rawHandler } from '../api';
 
 /**

@@ -19,6 +19,7 @@ import { Component, compose } from '@wordpress/element';
 import { getBlobByURL, revokeBlobURL, viewPort } from '@wordpress/utils';
 import {
 	IconButton,
+	MediaUpload,
 	SelectControl,
 	TextControl,
 	Toolbar,
@@ -31,7 +32,6 @@ import { withSelect } from '@wordpress/data';
  */
 import RichText from '../../rich-text';
 import ImagePlaceholder from '../../image-placeholder';
-import MediaUpload from '../../media-upload';
 import InspectorControls from '../../inspector-controls';
 import BlockControls from '../../block-controls';
 import BlockAlignmentToolbar from '../../block-alignment-toolbar';

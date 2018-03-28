@@ -10,6 +10,7 @@ import {
 	Button,
 	FormFileUpload,
 	IconButton,
+	MediaUpload,
 	Placeholder,
 	Toolbar,
 } from '@wordpress/components';
@@ -21,7 +22,6 @@ import { mediaUpload } from '@wordpress/utils';
  */
 import './style.scss';
 import './editor.scss';
-import MediaUpload from '../../media-upload';
 import RichText from '../../rich-text';
 import BlockControls from '../../block-controls';
 
