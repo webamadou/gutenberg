@@ -14,6 +14,7 @@ import { getBlockType, BlockIcon } from '@wordpress/blocks';
  * Internal Dependencies
  */
 import './style.scss';
+import SkipToSelectedBlock from '../skip-to-selected-block';
 import { getSelectedBlock, getSelectedBlockCount } from '../../store/selectors';
 
 const BlockInspector = ( { selectedBlock, count } ) => {
@@ -38,6 +39,7 @@ const BlockInspector = ( { selectedBlock, count } ) => {
 			</div>
 		</div>,
 		<Slot name="Inspector.Controls" key="inspector-controls" />,
+		<SkipToSelectedBlock key="back" />,
 	];
 };
 
