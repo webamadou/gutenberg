@@ -2,7 +2,7 @@
  * External dependencies
  */
 import classnames from 'classnames';
-import { escapeRegExp, find, filter, map } from 'lodash';
+import { forEach, escapeRegExp, find, filter, map } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -22,6 +22,7 @@ import withInstanceId from '../higher-order/with-instance-id';
 import withSpokenMessages from '../higher-order/with-spoken-messages';
 
 const { ENTER, ESCAPE, UP, DOWN, LEFT, RIGHT, SPACE } = keycodes;
+const { MutationObserver } = window;
 
 /**
  * Recursively select the firstChild until hitting a leaf node.
@@ -141,6 +142,8 @@ export class Autocomplete extends Component {
 		this.search = this.search.bind( this );
 		this.handleKeyDown = this.handleKeyDown.bind( this );
 		this.getWordRect = this.getWordRect.bind( this );
+		this.prepareMutationObserver = this.prepareMutationObserver.bind( this );
+		this.onMutation = this.onMutation.bind( this );
 
 		this.state = this.constructor.getInitialState();
 	}
@@ -194,8 +197,14 @@ export class Autocomplete extends Component {
 	getCursor( container ) {
 		const selection = window.getSelection();
 		if ( selection.isCollapsed ) {
+			// Internet Explorer only supports contains() for elements.
+			// We are simulating and identical condition using textContent and a string includes,
+			// So we don't throw errors when we should not on IE.
 			if ( 'production' !== process.env.NODE_ENV ) {
-				if ( ! container.contains( selection.anchorNode ) ) {
+				if ( ! container.contains( selection.anchorNode ) &&
+					selection.anchorNode &&
+					! container.textContent.includes( selection.anchorNode.textContent.trim() )
+				) {
 					throw new Error( 'Invalid assumption: expected selection to be within the autocomplete container' );
 				}
 			}
@@ -246,6 +255,12 @@ export class Autocomplete extends Component {
 	}
 
 	findMatch( container, cursor, allCompleters, wasOpen ) {
+		// when we first render, a mutation may be called with the text node.
+		// In this although we have a mutation like when we type cursor.node is not defined.
+		// We should not match anything for this cases.
+		if ( ! cursor.node ) {
+			return null;
+		}
 		const allowAnything = () => true;
 		let endTextNode;
 		let endIndex;
@@ -321,10 +336,9 @@ export class Autocomplete extends Component {
 		return { open, range, query };
 	}
 
-	search( event ) {
+	search( container ) {
 		const { open: wasOpen, suppress: wasSuppress } = this.state;
 		const { completers } = this.props;
-		const container = event.target;
 		// ensure that the cursor location is unambiguous
 		const cursor = this.getCursor( container );
 		if ( ! cursor ) {
@@ -442,6 +456,10 @@ export class Autocomplete extends Component {
 		this.node[ handler ]( 'keydown', this.handleKeyDown, true );
 	}
 
+	componentDidMount() {
+		this.prepareMutationObserver();
+	}
+
 	componentDidUpdate( prevProps, prevState ) {
 		const { open } = this.state;
 		const { open: prevOpen } = prevState;
@@ -450,8 +468,43 @@ export class Autocomplete extends Component {
 		}
 	}
 
+	onMutation( mutations ) {
+		forEach( mutations, ( mutation ) => {
+			if ( mutation.type === 'characterData' && mutation.target.parentNode ) {
+				this.search( mutation.target.parentNode );
+				return;
+			}
+			// for most browser handling characterData mutation would be enough,
+			// but it looks like IE11 in some situations e.g when we first insert text
+			// instead of passing a characterData mutation uses the addition of a #text node mutation.
+			forEach( mutation.addedNodes,
+				( addedNode ) => {
+					if ( addedNode.nodeName === '#text' && addedNode.parentNode ) {
+						this.search( addedNode.parentNode );
+					}
+				}
+			);
+		} );
+	}
+
+	prepareMutationObserver() {
+		if ( this.observer || ! this.node || ! MutationObserver ) {
+			return;
+		}
+		this.observer = new MutationObserver( this.onMutation );
+
+		this.observer.observe( this.node, {
+			subtree: true,
+			childList: true,
+			characterData: true,
+		} );
+	}
+
 	componentWillUnmount() {
 		this.toggleKeyEvents( false );
+		if ( this.observer ) {
+			this.observer.disconnect();
+		}
 	}
 
 	render() {
@@ -467,7 +520,6 @@ export class Autocomplete extends Component {
 		return (
 			<div
 				ref={ this.bindNode }
-				onInput={ this.search }
 				onClick={ this.resetWhenSuppressed }
 				className="components-autocomplete"
 			>
