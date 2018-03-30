@@ -7,6 +7,9 @@ export { focus };
 export { keycodes };
 export { decodeEntities };
 
+// Keep all old wp.utils components
+export const WordCounter = wp.utils.WordCounter;
+
 export * from './blob-cache';
 export * from './dom';
 export * from './mediaupload';
