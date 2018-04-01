@@ -2,14 +2,14 @@
  * External dependencies
  */
 import { connect } from 'react-redux';
-import { filter, unescape as unescapeString, throttle, union, find } from 'lodash';
+import { throttle, find } from 'lodash';
 import Select from 'react-select';
 
 /**
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { FormTokenField, withAPIData, withInstanceId } from '@wordpress/components';
+import { withAPIData, withInstanceId } from '@wordpress/components';
 import { Component, compose } from '@wordpress/element';
 
 /**
@@ -29,39 +29,42 @@ export class PostAuthor extends Component {
 		this.state = {
 			searchusers: [],
 		};
-
 	}
 
+	// When an author is selected, set the post author.
 	setAuthorId( value ) {
 		if ( ! value ) {
-		//	return;
+			return;
 		}
 		const { onUpdateAuthor } = this.props;
 		onUpdateAuthor( Number( value.id ) );
 	}
 
+	// Get the list of authors, returns default values or last search.
 	getAuthors() {
 		const { users, postAuthor } = this.props;
 		const { searchusers } = this.state;
+		const hasSearchResults = ( 0 !== searchusers.length );
+
 		if ( ! users.data ) {
 			users.data = [];
 		}
-		console.log( 'getAuthors',searchusers );
-		console.log( 'getAuthors',searchusers );
-		const allUsers = union( users.data, searchusers );
-		/*if ( ! find( allUsers, { id: postAuthor } ) ) {
-			const request = wp.apiRequest( { path: '/wp/v2/users/' + postAuthor + '?context=edit&_fields=name,id' } );
+
+		const allUsers = hasSearchResults ? searchusers : users.data;
+
+		// If the postAuthor user isn't found in the default ids, load it.
+		if ( ! hasSearchResults && ! find( allUsers, { id: postAuthor } ) ) {
+			const request = wp.apiRequest( { path: '/wp/v2/users/' + postAuthor + '?context=edit' } );
 			request.then( ( response ) => {
-				return union( response, allUsers );
+				this.setState( { searchusers: [ response ] } );
 			} );
 		} else {
+			return allUsers;
 		}
-		*/
-				return allUsers;
-}
+	}
 
+	// Fetch authors from the REST API.
 	fetchAuthors( query ) {
-		//console.log('query', query);
 		// If the query is blank, return the default user list.
 		if ( ! query ) {
 			return Promise.resolve( { options: this.getAuthors() } );
@@ -79,27 +82,27 @@ export class PostAuthor extends Component {
 		const { postAuthor, instanceId } = this.props;
 		const selectId = 'post-author-selector-' + instanceId;
 		const authors = this.getAuthors();
-console.log( 'postAuthor', postAuthor );
-		if ( ! authors || 0 === authors.length ) {
-			return false;
+
+		// Don't display component until authors have loaded.
+		if ( ! authors ) {
+			return null;
 		}
-console.log( 'authors', authors );
+
 		/* eslint-disable jsx-a11y/no-onchange */
 		return (
 			<PostAuthorCheck>
 				<label htmlFor={ selectId }>{ __( 'Author' ) }</label>
 				<Select.Async
-					id={selectId}
-					multi={false}
+					id={ selectId }
+					multi={ false }
 					value={ postAuthor }
 					onChange={ this.setAuthorId }
 					valueKey="id"
 					labelKey="name"
 					loadOptions={ this.fetchAuthors }
-					backspaceRemoves={false}
+					backspaceRemoves={ false }
 					options={ authors }
-					autoload={ true }
-					value={ postAuthor }
+					autoload={ false }
 					clearable={ false }
 					onBlurResetsInput={ false }
 					onCloseResetsInput={ false }
@@ -125,7 +128,7 @@ const applyConnect = connect(
 
 const applyWithAPIData = withAPIData( () => {
 	return {
-		users: '/wp/v2/users?context=edit&_fields=name,id',
+		users: '/wp/v2/users?context=edit&per_page=100',
 	};
 } );
 
