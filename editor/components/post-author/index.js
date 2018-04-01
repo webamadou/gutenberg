@@ -2,13 +2,14 @@
  * External dependencies
  */
 import { connect } from 'react-redux';
-import { filter } from 'lodash';
+import { filter, unescape as unescapeString, throttle, union, find } from 'lodash';
+import Select from 'react-select';
 
 /**
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { withAPIData, withInstanceId } from '@wordpress/components';
+import { FormTokenField, withAPIData, withInstanceId } from '@wordpress/components';
 import { Component, compose } from '@wordpress/element';
 
 /**
@@ -17,53 +18,92 @@ import { Component, compose } from '@wordpress/element';
 import PostAuthorCheck from './check';
 import { getEditedPostAttribute } from '../../store/selectors';
 import { editPost } from '../../store/actions';
+import './style.scss';
 
 export class PostAuthor extends Component {
 	constructor() {
 		super( ...arguments );
+		this.fetchAuthors = throttle( this.fetchAuthors.bind( this ), 300 );
 
 		this.setAuthorId = this.setAuthorId.bind( this );
+		this.state = {
+			searchusers: [],
+		};
+
 	}
 
-	setAuthorId( event ) {
+	setAuthorId( value ) {
+		if ( ! value ) {
+		//	return;
+		}
 		const { onUpdateAuthor } = this.props;
-		const { value } = event.target;
-		onUpdateAuthor( Number( value ) );
+		onUpdateAuthor( Number( value.id ) );
 	}
 
 	getAuthors() {
-		// While User Levels are officially deprecated, the behavior of the
-		// existing users dropdown on `who=authors` tests `user_level != 0`
-		//
-		// See: https://github.com/WordPress/WordPress/blob/a193916/wp-includes/class-wp-user-query.php#L322-L327
-		// See: https://codex.wordpress.org/Roles_and_Capabilities#User_Levels
-		const { users } = this.props;
-		return filter( users.data, ( user ) => {
-			return user.capabilities.level_1;
+		const { users, postAuthor } = this.props;
+		const { searchusers } = this.state;
+		if ( ! users.data ) {
+			users.data = [];
+		}
+		console.log( 'getAuthors',searchusers );
+		console.log( 'getAuthors',searchusers );
+		const allUsers = union( users.data, searchusers );
+		/*if ( ! find( allUsers, { id: postAuthor } ) ) {
+			const request = wp.apiRequest( { path: '/wp/v2/users/' + postAuthor + '?context=edit&_fields=name,id' } );
+			request.then( ( response ) => {
+				return union( response, allUsers );
+			} );
+		} else {
+		}
+		*/
+				return allUsers;
+}
+
+	fetchAuthors( query ) {
+		//console.log('query', query);
+		// If the query is blank, return the default user list.
+		if ( ! query ) {
+			return Promise.resolve( { options: this.getAuthors() } );
+		}
+		const request = wp.apiRequest( { path: '/wp/v2/users?context=edit&_fields=name,id&search=' + encodeURIComponent( query ) } );
+
+		// Return a promise that resolves with the user search results.
+		return request.then( ( response ) => {
+			this.setState( { searchusers: response } );
+			return { options: response };
 		} );
 	}
 
 	render() {
 		const { postAuthor, instanceId } = this.props;
-		const authors = this.getAuthors();
 		const selectId = 'post-author-selector-' + instanceId;
-
-		// Disable reason: A select with an onchange throws a warning
-
+		const authors = this.getAuthors();
+console.log( 'postAuthor', postAuthor );
+		if ( ! authors || 0 === authors.length ) {
+			return false;
+		}
+console.log( 'authors', authors );
 		/* eslint-disable jsx-a11y/no-onchange */
 		return (
 			<PostAuthorCheck>
 				<label htmlFor={ selectId }>{ __( 'Author' ) }</label>
-				<select
-					id={ selectId }
+				<Select.Async
+					id={selectId}
+					multi={false}
 					value={ postAuthor }
 					onChange={ this.setAuthorId }
-					className="editor-post-author__select"
-				>
-					{ authors.map( ( author ) => (
-						<option key={ author.id } value={ author.id }>{ author.name }</option>
-					) ) }
-				</select>
+					valueKey="id"
+					labelKey="name"
+					loadOptions={ this.fetchAuthors }
+					backspaceRemoves={false}
+					options={ authors }
+					autoload={ true }
+					value={ postAuthor }
+					clearable={ false }
+					onBlurResetsInput={ false }
+					onCloseResetsInput={ false }
+				/>
 			</PostAuthorCheck>
 		);
 		/* eslint-enable jsx-a11y/no-onchange */
@@ -85,7 +125,7 @@ const applyConnect = connect(
 
 const applyWithAPIData = withAPIData( () => {
 	return {
-		users: '/wp/v2/users?context=edit&per_page=100',
+		users: '/wp/v2/users?context=edit&_fields=name,id',
 	};
 } );
 
