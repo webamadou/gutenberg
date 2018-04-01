@@ -2,7 +2,7 @@
  * External dependencies
  */
 import { connect } from 'react-redux';
-import { throttle, find } from 'lodash';
+import { throttle, find, union } from 'lodash';
 import Select from 'react-select';
 
 /**
@@ -50,7 +50,7 @@ export class PostAuthor extends Component {
 			users.data = [];
 		}
 
-		const allUsers = hasSearchResults ? searchusers : users.data;
+		const allUsers = union( searchusers, users.data );
 
 		// If the postAuthor user isn't found in the default ids, load it.
 		if ( ! hasSearchResults && ! find( allUsers, { id: postAuthor } ) ) {
