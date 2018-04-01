@@ -24,7 +24,6 @@ export class PostAuthor extends Component {
 	constructor() {
 		super( ...arguments );
 		this.fetchAuthors = throttle( this.fetchAuthors.bind( this ), 300 );
-
 		this.setAuthorId = this.setAuthorId.bind( this );
 		this.state = {
 			searchusers: [],
@@ -63,7 +62,11 @@ export class PostAuthor extends Component {
 		}
 	}
 
-	// Fetch authors from the REST API.
+	/**
+	 * Fetch authors from the REST API.
+	 * @param  {string} query The search query.
+	 * @return {Array}        The user fetch results.
+	 */
 	fetchAuthors( query ) {
 		// If the query is blank, return the default user list.
 		if ( ! query ) {
