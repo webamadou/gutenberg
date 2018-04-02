@@ -369,14 +369,16 @@ export const settings = {
 
 				return <p style={ styles } className={ className ? className : undefined }>{ content }</p>;
 			},
-			migrate( attributes ) {
+			migrate( { attributes } ) {
 				if ( isFinite( attributes.fontSize ) ) {
-					return omit( {
-						...attributes,
-						customFontSize: attributes.fontSize,
-					}, 'fontSize' );
+					return {
+						attributes: omit( {
+							...attributes,
+							customFontSize: attributes.fontSize,
+						}, 'fontSize' ),
+					};
 				}
-				return attributes;
+				return { attributes };
 			},
 		},
 		{
@@ -391,12 +393,14 @@ export const settings = {
 			save( { attributes } ) {
 				return <RawHTML>{ attributes.content }</RawHTML>;
 			},
-			migrate( attributes ) {
+			migrate( { attributes } ) {
 				return {
-					...attributes,
-					content: [
-						<RawHTML key="html">{ attributes.content }</RawHTML>,
-					],
+					attributes: {
+						...attributes,
+						content: [
+							<RawHTML key="html">{ attributes.content }</RawHTML>,
+						],
+					},
 				};
 			},
 		},

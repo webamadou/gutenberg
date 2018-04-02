@@ -116,7 +116,8 @@ registerBlockType( 'gutenberg/block-with-deprecated-version', {
 				}
 			},
 
-			migrate: function( attributes ) {
+			migrate: function( attributesAndInnerBlocks ) {
+				var attributes = attributesAndInnerBlocks;
 				return {
 					content: attributes.text
 				};
@@ -157,9 +158,9 @@ registerBlockType( 'gutenberg/block-with-deprecated-version', {
 				}
 			},
 
-			migrate( { text } ) {
+			migrate( { attributes } ) {
 				return {
-					content: text
+					content: attributes.text
 				};
 			},
 
@@ -173,3 +174,98 @@ registerBlockType( 'gutenberg/block-with-deprecated-version', {
 {% end %}
 
 In the example above we updated the markup of the block to use a `div` instead of `p` and rename the `text` attribute to `content`.
+
+
+## Changing the innerBlocks
+
+Situations may exist where when migrating the block we may need to add or remove innerBlocks.
+E.g: a block wants to migrate a title attribute to a paragraph innerBlock.
+
+### Example:
+
+{% codetabs %}
+{% ES5 %}
+```js
+var el = wp.element.createElement,
+	registerBlockType = wp.blocks.registerBlockType;
+
+registerBlockType( 'gutenberg/block-with-deprecated-version', {
+
+	// ... block properties go here
+
+	deprecated: [
+		{
+			attributes: {
+				title: {
+					type: 'array',
+					source: 'children',
+					selector: 'p',
+				},
+			},
+
+			migrate: function( attributesAndInnerBlocks ) {
+				var attributes = attributesAndInnerBlocks;
+				var innerBlocks = attributesAndInnerBlocks.innerBlocks;
+				return {
+					attributes: omit( attributes, 'title' ),
+					innerBlocks: [
+						createBlock( 'core/paragraph', {
+							content: attributes.title,
+							fontSize: 'large',
+						} ),
+					].concat( innerBlocks ),
+				};
+			},
+
+			save: function( props ) {
+				return el( 'p', {}, props.attributes.title );
+			},
+		}
+	]
+} );
+```
+{% ESNext %}
+```js
+const { registerBlockType } = wp.blocks;
+
+registerBlockType( 'gutenberg/block-with-deprecated-version', {
+
+	// ... block properties go here
+
+	save( props ) {
+		return <p>{ props.attributes.title }</div>;
+	},
+
+	deprecated: [
+		{
+			attributes: {
+				title: {
+					type: 'array',
+					source: 'children',
+					selector: 'p',
+				},
+			},
+
+			migrate( { attributes, innerBlocks }  ) {
+				return {
+					attributes: omit( attributes, 'title' ),
+					innerBlocks: [
+						createBlock( 'core/paragraph', {
+							content: attributes.title,
+							fontSize: 'large',
+						} ),
+						...innerBlocks,
+					],
+				};
+			},
+
+			save( props ) {
+				return <p>{ props.attributes.title }</div>;
+			},
+		}
+	]
+} );
+```
+{% end %}
+
+In the example above we updated the the block to use an inner paragraph block with a title instead of a title attribute.

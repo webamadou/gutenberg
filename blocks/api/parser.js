@@ -161,7 +161,7 @@ export function getBlockAttributes( blockType, innerHTML, attributes ) {
  *
  * @return {Object} Block attributes.
  */
-export function getAttributesFromDeprecatedVersion( blockType, innerHTML, attributes ) {
+export function getAttributesAndInnerBlocksFromDeprecatedVersion( blockType, innerHTML, attributes, innerBlocks ) {
 	// Not all blocks need a deprecated definition so avoid unnecessary computational cycles
 	// as early as possible when `deprecated` property is not supplied.
 	if ( ! blockType.deprecated || ! blockType.deprecated.length ) {
@@ -181,12 +181,14 @@ export function getAttributesFromDeprecatedVersion( blockType, innerHTML, attrib
 		try {
 			// Handle migration of older attributes into current version if necessary.
 			const deprecatedBlockAttributes = getBlockAttributes( deprecatedBlockType, innerHTML, attributes );
-			const migratedBlockAttributes = deprecatedBlockType.migrate ? deprecatedBlockType.migrate( deprecatedBlockAttributes ) : deprecatedBlockAttributes;
+			const migratedBlockAttributesAndInnerBlocks = deprecatedBlockType.migrate ?
+				deprecatedBlockType.migrate( { attributes: deprecatedBlockAttributes, innerBlocks } ) :
+				{ attributes: deprecatedBlockAttributes, innerBlocks };
 
 			// Attempt to validate the parsed block. Ignore if the the validation step fails.
 			const isValid = isValidBlock( innerHTML, deprecatedBlockType, deprecatedBlockAttributes );
 			if ( isValid ) {
-				return migratedBlockAttributes;
+				return migratedBlockAttributesAndInnerBlocks;
 			}
 		} catch ( error ) {
 			// Ignore error, it means this deprecated version is invalid.
@@ -275,13 +277,14 @@ export function createBlockWithFallback( blockNode ) {
 	// This enables blocks to modify its attributes and markup structure without
 	// invalidating content written in previous formats.
 	if ( ! block.isValid ) {
-		const attributesParsedWithDeprecatedVersion = getAttributesFromDeprecatedVersion(
-			blockType, innerHTML, attributes
+		const attributesAndInnerBlocksParsedWithDeprecatedVersion = getAttributesAndInnerBlocksFromDeprecatedVersion(
+			blockType, innerHTML, attributes, block.innerBlocks
 		);
 
-		if ( attributesParsedWithDeprecatedVersion ) {
+		if ( attributesAndInnerBlocksParsedWithDeprecatedVersion ) {
 			block.isValid = true;
-			block.attributes = attributesParsedWithDeprecatedVersion;
+			block.attributes = attributesAndInnerBlocksParsedWithDeprecatedVersion.attributes;
+			block.innerBlocks = attributesAndInnerBlocksParsedWithDeprecatedVersion.innerBlocks || [];
 		}
 	}
 
