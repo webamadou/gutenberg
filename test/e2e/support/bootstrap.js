@@ -7,7 +7,7 @@ import puppeteer from 'puppeteer';
 jest.setTimeout( 100000 );
 
 beforeAll( async () => {
-	global.browser = await puppeteer.launch();
+	global.browser = await puppeteer.launch( { headless: false, slowMo: 80 } );
 } );
 
 afterAll( async () => {
